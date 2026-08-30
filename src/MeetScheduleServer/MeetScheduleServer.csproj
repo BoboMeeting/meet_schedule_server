@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MeetScheduleServer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- LiveKit 官方社区 .NET SDK：Token / RoomService / Webhook -->
+    <PackageReference Include="Livekit.Server.Sdk.Dotnet" Version="1.0.*" />
+    <!-- LiveKit RTC SDK：Bot 以参会者身份入会（含 Win/Linux/macOS 原生二进制） -->
+    <PackageReference Include="Livekit.Rtc.Dotnet" Version="0.1.*" />
+  </ItemGroup>
+
+</Project>
