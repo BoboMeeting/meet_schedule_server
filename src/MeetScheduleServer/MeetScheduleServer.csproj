@@ -12,6 +12,8 @@
     <PackageReference Include="Livekit.Server.Sdk.Dotnet" Version="1.0.*" />
     <!-- LiveKit RTC SDK：Bot 以参会者身份入会（含 Win/Linux/macOS 原生二进制） -->
     <PackageReference Include="Livekit.Rtc.Dotnet" Version="0.1.*" />
+    <!-- JWT Bearer 认证：内部(aud=Service)/外部(用户 JWT) 双方案 -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.*" />
   </ItemGroup>
 
 </Project>
