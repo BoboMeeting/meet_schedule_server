@@ -1,0 +1,60 @@
+services:
+  # ============================================================================
+  # 调度服务：.NET 10 Web API（内存存储，无数据库依赖）
+  # ============================================================================
+  scheduler:
+    # 强制 amd64 平台，避免在 x86 服务器上拉到 arm64 镜像导致 exec format error
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bobomeet-scheduler:latest
+    container_name: bobomeet-scheduler
+    restart: unless-stopped
+    ports:
+      - "${SCHEDULER_PORT:-5000}:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5000
+
+      # JWT 配置（同一共享密钥，按受众分区：内部 aud=Service / 外部用户 JWT）
+      # 注意：AUTH_JWT_SECRET 必须与管理平台(ManagerPlatform)的 Jwt__Secret 完全一致
+      Auth__JwtSecret: ${AUTH_JWT_SECRET:?必须在 .env 中提供 AUTH_JWT_SECRET（>=32 字节），且与管理平台 JWT_SECRET 完全一致}
+      Auth__Issuer: ${JWT_ISSUER:-BoboMeet.ManagerPlatform}
+      Auth__ClientAudience: ${JWT_AUDIENCE:-BoboMeet.Client}
+
+      # LiveKit 连接（Bot 入会 / 服务端 API / Webhook 验签）
+      # LiveKit 跑在宿主机时容器内必须用 host.docker.internal（localhost 指向容器自身）
+      LiveKit__Url: ${LIVEKIT_URL:-ws://host.docker.internal:7880}
+      LiveKit__ApiKey: ${LIVEKIT_API_KEY:-devkey}
+      LiveKit__ApiSecret: ${LIVEKIT_API_SECRET:?必须在 .env 中提供 LIVEKIT_API_SECRET，须与 LiveKit 服务器 livekit.yaml 一致（>=256 位，Webhook 验签必需）}
+
+      # 调度器
+      Scheduler__PollIntervalSeconds: ${SCHEDULER_POLL_INTERVAL_SECONDS:-1}
+      Scheduler__BotIdentityPrefix: ${SCHEDULER_BOT_IDENTITY_PREFIX:-bot}
+    extra_hosts:
+      # 允许容器通过 host.docker.internal 访问宿主机（LiveKit 在宿主机上运行时必需）
+      # Docker Desktop for Windows/Mac 原生支持；Linux 上由 host-gateway 显式映射
+      - "host.docker.internal:host-gateway"
+    networks:
+      - bobomeet
+    healthcheck:
+      # 镜像内无 curl，使用随镜像发布的 HealthCheck 小工具（dotnet 运行时）探测 /healthz
+      test: ["CMD", "dotnet", "/app/healthcheck/HealthCheck.dll", "http://127.0.0.1:5000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  bobomeet:
+    driver: bridge
+    # ----------------------------------------------------------------------------
+    # 与管理平台（ManagerPlatform/docker-compose.yml）容器互通（可选）：
+    # 1) 注释掉上面的 driver: bridge，取消下面两行注释（加入管理平台创建的外部网络）
+    # 2) 先启动管理平台的 compose（确保 bobomeet 网络已存在）
+    # 3) 在管理平台 .env 中设置 SCHEDULER_INTERNAL_URL=http://scheduler:5000
+    #    （SCHEDULER_EXTERNAL_URL 按客户端可达地址填写）
+    # 不互通时保持默认：管理平台通过 http://host.docker.internal:5000 访问本服务
+    # name: bobomeet
+    # external: true
