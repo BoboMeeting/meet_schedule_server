@@ -26,7 +26,10 @@ public static class MeetingEndpoints
             CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(req.RoomName) || string.IsNullOrWhiteSpace(req.Identity))
+            {
+                logger.LogWarning("[meeting] 内部建房失败：roomName/identity 必填，conference={ConferenceId}", req.ConferenceId);
                 return Results.BadRequest(new { error = "roomName/identity 必填" });
+            }
 
             // 幂等确保 LiveKit 媒体房间存在（同名重复创建为 no-op）
             try
@@ -48,6 +51,9 @@ public static class MeetingEndpoints
                 req.IsHost,
                 req.ConferenceId);
 
+            logger.LogInformation(
+                "[meeting] 内部建房成功：room={Room}，场次={ConferenceId}，参会者={Identity}（{Name}，isHost={IsHost}）",
+                req.RoomName, req.ConferenceId, req.Identity, req.Name, req.IsHost);
             return Results.Created(
                 $"/api/v1/internal/rooms/{req.RoomName}",
                 new RoomTicketResponse(req.RoomName, ticket, DateTimeOffset.UtcNow.AddMinutes(5)));
@@ -60,6 +66,7 @@ public static class MeetingEndpoints
             IRoomTicketService tickets,
             ILiveKitTokenFactory tokenFactory,
             IOptions<LiveKitOptions> liveKit,
+            ILogger<Program> logger,
             CancellationToken ct) =>
         {
             // 用户 JWT 中的 UserID（sub 已由 JwtBearer 映射为 NameIdentifier）
@@ -69,20 +76,35 @@ public static class MeetingEndpoints
                 return Results.Unauthorized();
 
             if (string.IsNullOrWhiteSpace(req.Ticket))
+            {
+                logger.LogWarning("[meeting] 外部入会失败：ticket 必填，用户={UserId}", userId);
                 return Results.BadRequest(new { error = "ticket 必填" });
+            }
 
             if (!tickets.TryValidate(req.Ticket, out var ticket))
+            {
+                // 凭证校验失败是入会排障高频点：签名无效/过期/受众不符统一在此暴露
+                logger.LogWarning("[meeting] 外部入会失败：房间凭证无效或已过期，用户={UserId}", userId);
                 return Results.Unauthorized();
+            }
 
             // 防凭证跨用户盗用：ticket 中的参会者必须与登录用户一致
             if (!string.Equals(ticket.Identity, userId, StringComparison.Ordinal))
+            {
+                logger.LogWarning(
+                    "[meeting] 外部入会失败：凭证与用户不匹配（疑似盗用），用户={UserId}，凭证身份={TicketIdentity}，房间={Room}",
+                    userId, ticket.Identity, ticket.RoomName);
                 return Results.Json(
                     new { error = "房间凭证与当前用户不匹配" },
                     statusCode: StatusCodes.Status403Forbidden);
+            }
 
             var liveKitToken = tokenFactory.CreateClientToken(
                 ticket.RoomName, ticket.Identity, ticket.Name, ticket.IsHost);
 
+            logger.LogInformation(
+                "[meeting] 外部入会成功：room={Room}，用户={UserId}（{Name}，isHost={IsHost}），场次={ConferenceId}",
+                ticket.RoomName, ticket.Identity, ticket.Name, ticket.IsHost, ticket.ConferenceId);
             return Results.Ok(new ExternalJoinResponse(
                 ticket.RoomName,
                 ticket.Identity,
