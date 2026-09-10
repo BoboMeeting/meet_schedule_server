@@ -15,6 +15,9 @@ public sealed class LiveKitOptions
 
     public string ApiSecret { get; set; } = "secret";
 
+    /// <summary>要自动派遣入会的 LiveKit Agent 名（对应 agent 服务的 dispatch name，如 my-agent）。</summary>
+    public string AgentName { get; set; } = "my-agent";
+
     /// <summary>Twirp HTTP 地址（服务端 API 用，ws→http / wss→https）</summary>
     public string HttpUrl =>
         Url.Replace("ws://", "http://").Replace("wss://", "https://");

@@ -27,7 +27,8 @@ public sealed class LiveKitTokenFactory : ILiveKitTokenFactory
     public string CreateClientToken(string roomName, string identity, string name, bool isHost)
     {
         // 使用 LiveKit 官方 SDK 签发，grants 显式包含所需权限；
-        // CanUpdateOwnMetadata 必须显式授予，否则客户端 setMetadata 会被服务端 401 拒绝。
+        // CanUpdateOwnMetadata 必须显式授予，否则客户端 setMetadata 会被服务端 401 拒绝；
+        // roomConfig 携带 Agent 派遣信息：房间首次创建时由 LiveKit 自动拉对应 Agent 入会。
         return new AccessToken(_opt.ApiKey, _opt.ApiSecret)
             .WithIdentity(identity)
             .WithName(name)
@@ -39,6 +40,13 @@ public sealed class LiveKitTokenFactory : ILiveKitTokenFactory
                 CanSubscribe = true,
                 CanPublishData = true,
                 CanUpdateOwnMetadata = true,
+            })
+            .WithRoomConfig(new RoomConfiguration
+            {
+                Agents =
+                {
+                    new RoomAgentDispatch { AgentName = _opt.AgentName },
+                },
             })
             .WithTtl(TimeSpan.FromHours(6))
             .ToJwt();
