@@ -102,6 +102,9 @@ public static class MeetingEndpoints
             var liveKitToken = tokenFactory.CreateClientToken(
                 ticket.RoomName, ticket.Identity, ticket.Name, ticket.IsHost);
 
+            logger.LogWarning(
+                "[meeting] 为用户签发Token：room={Room}，用户={UserId}（{Name}，Token={Token}）",
+                ticket.RoomName, ticket.Identity, ticket.Name, liveKitToken);
             logger.LogInformation(
                 "[meeting] 外部入会成功：room={Room}，用户={UserId}（{Name}，isHost={IsHost}），场次={ConferenceId}",
                 ticket.RoomName, ticket.Identity, ticket.Name, ticket.IsHost, ticket.ConferenceId);
