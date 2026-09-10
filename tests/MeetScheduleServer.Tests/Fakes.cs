@@ -10,16 +10,23 @@ public sealed class FakeLiveKitServerApi : ILiveKitServerApi
 {
     public List<string> CreatedRooms { get; } = new();
     public List<string> DeletedRooms { get; } = new();
+    public List<(string Room, string? AgentName, string? Metadata)> DispatchedAgents { get; } = new();
     public List<(string Room, byte[] Data, bool Reliable, string? Topic, IReadOnlyList<string>? Dest)> SentData { get; } = new();
     public Exception? CreateRoomException { get; set; }
 
-    public Task CreateRoomAsync(string roomName, int emptyTimeoutSeconds = 300, CancellationToken ct = default)
+    public Task CreateRoomAsync(string roomName, int emptyTimeoutSeconds = 300, string? agentName = null, CancellationToken ct = default)
     {
         if (CreateRoomException is not null)
         {
             throw CreateRoomException;
         }
         CreatedRooms.Add(roomName);
+        return Task.CompletedTask;
+    }
+
+    public Task DispatchAgentAsync(string roomName, string? agentName = null, string? metadata = null, CancellationToken ct = default)
+    {
+        DispatchedAgents.Add((roomName, agentName, metadata));
         return Task.CompletedTask;
     }
 

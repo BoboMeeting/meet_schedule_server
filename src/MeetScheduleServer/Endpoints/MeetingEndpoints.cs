@@ -34,7 +34,7 @@ public static class MeetingEndpoints
             // 幂等确保 LiveKit 媒体房间存在（同名重复创建为 no-op）
             try
             {
-                await liveKitApi.CreateRoomAsync(req.RoomName, ct: ct);
+                await liveKitApi.CreateRoomAsync(req.RoomName, "my-agent",ct: ct);
             }
             catch (Exception ex)
             {

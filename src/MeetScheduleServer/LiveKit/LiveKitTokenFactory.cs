@@ -28,7 +28,6 @@ public sealed class LiveKitTokenFactory : ILiveKitTokenFactory
     {
         // 使用 LiveKit 官方 SDK 签发，grants 显式包含所需权限；
         // CanUpdateOwnMetadata 必须显式授予，否则客户端 setMetadata 会被服务端 401 拒绝；
-        // roomConfig 携带 Agent 派遣信息：房间首次创建时由 LiveKit 自动拉对应 Agent 入会。
         return new AccessToken(_opt.ApiKey, _opt.ApiSecret)
             .WithIdentity(identity)
             .WithName(name)
@@ -41,13 +40,15 @@ public sealed class LiveKitTokenFactory : ILiveKitTokenFactory
                 CanPublishData = true,
                 CanUpdateOwnMetadata = true,
             })
-            .WithRoomConfig(new RoomConfiguration
-            {
-                Agents =
-                {
-                    new RoomAgentDispatch { AgentName = _opt.AgentName },
-                },
-            })
+            //由于在客户端加入房间前，调度已向livekit创建了房间（携带agentName，房间首次创建时由LiveKit自动拉对应Agent入会）
+            //客户端加入房间时，无需再携带agentName，LiveKit会自动拉对应Agent入会。
+            //.WithRoomConfig(new RoomConfiguration
+            //{
+            //    Agents =
+            //    {
+            //        new RoomAgentDispatch { AgentName = _opt.AgentName },
+            //    },
+            //})
             .WithTtl(TimeSpan.FromHours(6))
             .ToJwt();
     }
